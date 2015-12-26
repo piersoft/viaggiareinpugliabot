@@ -79,7 +79,7 @@ function start($telegram,$update)
 				$string=0;
 				sleep (1);
 			}
-			$urlgd="http://www.piersoft.it/viaggiareinpugliabot/db/luoghi.csv";
+			$urlgd="db/luoghi.csv";
 
 			  $inizio=0;
 			  $homepage ="";
@@ -195,7 +195,7 @@ function location_manager($telegram,$user_id,$chat_id,$location)
 
 			  $alert="";
 			//	echo $comune;
-			$urlgd="http://www.piersoft.it/viaggiareinpugliabot/db/luoghi.csv";
+			$urlgd="db/luoghi.csv";
 
 				$inizio=0;
 				$homepage ="";

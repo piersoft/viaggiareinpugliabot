@@ -9,7 +9,7 @@ $csv1 = array_map('str_getcsv', file($indirizzo));
 
   $homepage1 = file_get_contents($url);
 	$homepage1=str_replace(",",".",$homepage1); //le lat e lon hanno la , e quindi metto il .
-  $homepage1=str_replace(";",",",$homepage1); // concerto il CSV da separatore ; a ,
+  $homepage1=str_replace(";",",",$homepage1); // converto il CSV da separatore ; a ,
 
   //echo $homepage1;
   $file = '/usr/www/piersoft/viaggiareinpugliabot/db/luoghi.csv';
