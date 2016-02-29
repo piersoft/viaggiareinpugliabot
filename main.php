@@ -32,7 +32,11 @@ function start($telegram,$update)
 	if (strpos($text,'@viaggiareinpugliabot') !== false) $text=str_replace("@viaggiareinpugliabot ","",$text);
 
 	if ($text == "/start" || $text == "Informazioni") {
-		$reply = "Benvenuto. Per ricercare un luogo di interesse turistico, culturale censito da ViaggiareinPuglia.it, digita il nome del Comune oppure clicca sulla graffetta (📎) e poi 'posizione' . Puoi anche ricercare per parola chiava nel titolo anteponendo il carattere ?. Verrà interrogato il DataBase openData utilizzabile con licenza IoDL2.0 presente su http://www.dataset.puglia.it/dataset/luoghi-di-interesse-turistico-culturale-naturalistico . In qualsiasi momento scrivendo /start ti ripeterò questo messaggio di benvenuto.\nQuesto bot, non ufficiale e non collegato con il marchio regionale ViaggiareinPuglia.it, è stato realizzato da @piersoft e potete migliorare il codice sorgente con licenza MIT che trovate su https://github.com/piersoft/viaggiareinpugliabot. La propria posizione viene ricercata grazie al geocoder di openStreetMap con Lic. odbl.";
+		$img = curl_file_create('puglia.png','image/png');
+		$contentp = array('chat_id' => $chat_id, 'photo' => $img);
+		$telegram->sendPhoto($contentp);
+
+		$reply = "Benvenuto. Per ricercare un luogo di interesse turistico, culturale censito da ViaggiareinPuglia.it, digita il nome del Comune oppure clicca sulla graffetta (📎) e poi 'posizione' . Puoi anche ricercare per parola chiave nel titolo anteponendo il carattere ?. Verrà interrogato il DataBase openData utilizzabile con licenza IoDL2.0 presente su http://www.dataset.puglia.it/dataset/luoghi-di-interesse-turistico-culturale-naturalistico . In qualsiasi momento scrivendo /start ti ripeterò questo messaggio di benvenuto.\nQuesto bot, non ufficiale e non collegato con il marchio regionale ViaggiareinPuglia.it, è stato realizzato da @piersoft e potete migliorare il codice sorgente con licenza MIT che trovate su https://github.com/piersoft/viaggiareinpugliabot. La propria posizione viene ricercata grazie al geocoder di openStreetMap con Lic. odbl.";
 		$content = array('chat_id' => $chat_id, 'text' => $reply,'disable_web_page_preview'=>true);
 		$telegram->sendMessage($content);
 		$log=$today. ";new chat started;" .$chat_id. "\n";
@@ -63,9 +67,6 @@ function start($telegram,$update)
 
 		elseif(strpos($text,'/') === false){
 			$string=0;
-			$img = curl_file_create('puglia.png','image/png');
-			$contentp = array('chat_id' => $chat_id, 'photo' => $img);
-			$telegram->sendPhoto($contentp);
 
 			if(strpos($text,'?') !== false){
 				$text=str_replace("?","",$text);
@@ -73,13 +74,13 @@ function start($telegram,$update)
 				$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 				$telegram->sendMessage($content);
 				$string=1;
-				sleep (1);
+	//			sleep (1);
 			}else{
 				$location="Sto cercando i luoghi di interesse per località comprendente: ".$text;
 				$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 				$telegram->sendMessage($content);
 				$string=0;
-				sleep (1);
+		//		sleep (1);
 			}
 			$urlgd="db/luoghi.csv";
 
@@ -148,8 +149,8 @@ if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 
 				$homepage .="\n____________\n";
 				}
-				if ($ciclo >40) {
-					$location="Troppi risultati per essere visualizzati. Restringi la ricerca";
+				if ($ciclo >100) {
+					$location="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
 					$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 					$telegram->sendMessage($content);
 
@@ -294,8 +295,8 @@ if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
 
 				$homepage .="\n____________\n";
 				}
-					if ($ciclo >40) {
-						$location="Troppi risultati per essere visualizzati. Restringi la ricerca";
+					if ($ciclo >100) {
+						$location="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
 						$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 						$telegram->sendMessage($content);
 
