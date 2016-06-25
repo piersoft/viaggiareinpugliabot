@@ -202,9 +202,9 @@ if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 				$homepage .="____________\n";
 				}
 
-				if ($ciclo >100) {
-					$location="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
-					$location .="\nToo many results to be displayed (more than 100). Narrow Search";
+				if ($ciclo >300) {
+					$location="Troppi risultati per essere visualizzati (più di 300). Restringi la ricerca";
+					$location .="\nToo many results to be displayed (more than 300). Narrow Search";
 					$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 					$telegram->sendMessage($content);
 
@@ -355,9 +355,9 @@ if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
 */
 				$homepage .="____________\n";
 				}
-					if ($ciclo >100) {
-						$location ="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
-						$location .="\nToo many results to be displayed (more than 100). Narrow Search";
+					if ($ciclo >300) {
+						$location ="Troppi risultati per essere visualizzati (più di 300). Restringi la ricerca";
+						$location .="\nToo many results to be displayed (more than 300). Narrow Search";
 						$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 						$telegram->sendMessage($content);
 
