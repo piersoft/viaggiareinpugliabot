@@ -5,15 +5,38 @@
  *
  */
 
-include('settings_t.php');
-
+include('settings.php');
 
 class Telegram {
 	private $bot_id = TELEGRAM_BOT;
 	private $data = array();
 	private $updates = array();
 	public $inited = false;
-public $link = "";
+
+	public function InputTextMessageContent($message_text, $parse_mode = null, $disable_web_page_preview = false)
+	{
+		$params = compact('message_text', 'parse_mode', 'disable_web_page_preview');
+		return $params;
+	}
+
+	public function InlineQueryResultArticle($id, $title, $input_message_content,$thumb_url = "", $reply_markup,$url = "", $hide_url = false, $description = "", $thumb_width , $thumb_height)
+	{
+	    $type = 'article';
+	    $params = compact('type', 'id', 'title', 'input_message_content', 'thumb_url','reply_markup','url', 'hide_url', 'description','thumb_width','thumb_height');
+	    return $params;
+	}
+
+	public function InlineQueryResultLocation($id, $latitude,$longitude,$title )
+	{
+	    $type = 'location';
+	    $params = compact('type', 'id', 'latitude','longitude','title');
+	    return $params;
+	}
+
+	public function answerInlineQuery(array $content) {
+			return $this->endpoint("answerInlineQuery",$content);
+	}
+
  public function __construct($bot_id) {
         $this->bot_id = $bot_id;
         $this->data = $this->getData();
@@ -137,8 +160,6 @@ public $link = "";
 		if ($type == 'photo' || $type == "audio" || $type == "video" || $type == "document") {
 			$mimetype = mime_content_type($content);
 			$content = new CurlFile($content, $mimetype);
-				$link = $this->data["message"]["photo"]["file_path"];
-
 		} elseif ($type == "message") {
 			$type = 'text';
 		}
@@ -220,6 +241,13 @@ public $link = "";
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $result = curl_exec($ch);
         curl_close($ch);
+
+				$myFile = "db/logarray.txt";
+				$updateArray = print_r($result,TRUE);
+				$fh = fopen($myFile, 'a') or die("can't open file");
+				fwrite($fh, $updateArray."\n");
+				fclose($fh);
+			
         return $result;
     }
 }

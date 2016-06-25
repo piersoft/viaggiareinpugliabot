@@ -14,29 +14,31 @@ function start($telegram,$update)
 	date_default_timezone_set('Europe/Rome');
 	$today = date("Y-m-d H:i:s");
 
+		$inline_query = $update["inline_query"];
 	$text = $update["message"] ["text"];
 	$chat_id = $update["message"] ["chat"]["id"];
 	$user_id=$update["message"]["from"]["id"];
 	$location=$update["message"]["location"];
 	$reply_to_msg=$update["message"]["reply_to_message"];
 
-	$this->shell($telegram,$text,$chat_id,$user_id,$location,$reply_to_msg);
+	$this->shell($inline_query,$telegram,$text,$chat_id,$user_id,$location,$reply_to_msg);
 	$db = NULL;
 
 }
 
- function shell($telegram,$text,$chat_id,$user_id,$location,$reply_to_msg)
+ function shell($inline_query,$telegram,$text,$chat_id,$user_id,$location,$reply_to_msg)
 {
 	date_default_timezone_set('Europe/Rome');
 	$today = date("Y-m-d H:i:s");
-	if (strpos($text,'@viaggiareinpugliabot') !== false) $text=str_replace("@viaggiareinpugliabot ","",$text);
+//	if (strpos($text,'@viaggiareinpugliabot') !== false) $text=str_replace("@viaggiareinpugliabot ","",$text);
 
-	if ($text == "/start" || $text == "Informazioni") {
+	if ($text == "/start" || $text == "Info") {
 		$img = curl_file_create('puglia.png','image/png');
 		$contentp = array('chat_id' => $chat_id, 'photo' => $img);
 		$telegram->sendPhoto($contentp);
 
 		$reply = "Benvenuto. Per ricercare un luogo di interesse turistico, culturale censito da ViaggiareinPuglia.it, digita il nome del Comune oppure clicca sulla graffetta (📎) e poi 'posizione' . Puoi anche ricercare per parola chiave nel titolo anteponendo il carattere ?. Verrà interrogato il DataBase openData utilizzabile con licenza IoDL2.0 presente su http://www.dataset.puglia.it/dataset/luoghi-di-interesse-turistico-culturale-naturalistico . In qualsiasi momento scrivendo /start ti ripeterò questo messaggio di benvenuto.\nQuesto bot, non ufficiale e non collegato con il marchio regionale ViaggiareinPuglia.it, è stato realizzato da @piersoft e potete migliorare il codice sorgente con licenza MIT che trovate su https://github.com/piersoft/viaggiareinpugliabot. La propria posizione viene ricercata grazie al geocoder di openStreetMap con Lic. odbl.";
+		$reply .="\nWelcome. To search for a place of tourist, cultural surveyed by ViaggiareinPuglia.it, type the name of the municipality or click on the paper clip (📎) and then 'position'. You can also search by keyword in the title prefixing the character ?. Will be questioned DataBase OpenData IoDL2.0 used with this license on http://www.dataset.puglia.it/dataset/luoghi-di-interesse-turistico-culturale-naturalistico. At any time by writing /start will repeat this message of welcome. \nThis bots, unofficial and unconnected with the regional brand ViaggiareinPuglia.it, has been realized by @piersoft and you can improve the source code under the MIT license that found on https://github.com/piersoft/viaggiareinpugliabot. Its position is searched through the geocoder OpenStreetMap with Lic. ODbL.";
 		$content = array('chat_id' => $chat_id, 'text' => $reply,'disable_web_page_preview'=>true);
 		$telegram->sendMessage($content);
 		$log=$today. ";new chat started;" .$chat_id. "\n";
@@ -44,20 +46,24 @@ function start($telegram,$update)
 
 		exit;
 		}
-		elseif ($text == "Città") {
-			$reply = "Digita direttamente il nome del Comune.";
+		elseif ($text == "Città/City") {
+			$reply = "Digita direttamente il nome del Comune. / Type city or Town";
 			$content = array('chat_id' => $chat_id, 'text' => $reply,'disable_web_page_preview'=>true);
 			$telegram->sendMessage($content);
 			$log=$today. ";new chat started;" .$chat_id. "\n";
 			exit;
 			}
-			elseif ($text == "Ricerca") {
-				$reply = "Scrivi la parola da cercare anteponendo il carattere ?, ad esempio: ?Chiesa Matrice";
+			elseif ($text == "Ricerca/Search") {
+				$reply = "Digita la parola da cercare anteponendo il carattere ?, ad esempio: ?Chiesa Matrice";
+				$reply .="\nType in the search word by prefixing the character?, For example: ?Chiesa Matrice";
 				$content = array('chat_id' => $chat_id, 'text' => $reply,'disable_web_page_preview'=>true);
 				$telegram->sendMessage($content);
 				$log=$today. ";new chat started;" .$chat_id. "\n";
 				exit;
-			}
+			}elseif (strpos($inline_query["location"],'.') !== false){
+					$this->location_manager_inline($inline_query,$telegram,$user_id,$chat_id,$location);
+					exit;
+				}
 			elseif($location!=null)
 		{
 
@@ -65,9 +71,12 @@ function start($telegram,$update)
 			exit;
 		}
 
-		elseif(strpos($text,'/') === false){
+		else{
+			if (strpos($text,'1') !== false || strpos($text,'2') !== false ||strpos($text,'3') !== false ||strpos($text,'4') !== false ||strpos($text,'5') !== false ||strpos($text,'6') !== false ||strpos($text,'7') !== false ||strpos($text,'8') !== false ||strpos($text,'9') !== false ) {
+				$text="/".$text;
+			}
 			$string=0;
-
+			$optionf=array([]);
 			if(strpos($text,'?') !== false){
 				$text=str_replace("?","",$text);
 				$location="Sto cercando i luoghi aventi nel titolo: ".$text;
@@ -75,13 +84,18 @@ function start($telegram,$update)
 				$telegram->sendMessage($content);
 				$string=1;
 	//			sleep (1);
-			}else{
+			}elseif(strpos($text,'/') === false){
 				$location="Sto cercando i luoghi di interesse per località comprendente: ".$text;
+				$location .="\nI'm looking for the places of interest in locations including:".$text;
 				$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 				$telegram->sendMessage($content);
 				$string=0;
 		//		sleep (1);
-			}
+	}elseif(strpos($text,'/') !== false){
+		$text=str_replace("/","",$text);
+		$string=2;
+
+	}
 			$urlgd="db/luoghi.csv";
 
 			  $inizio=0;
@@ -93,7 +107,7 @@ function start($telegram,$update)
 				}
 			if ($count ==0 || $count ==1)
 			{
-						$location="Nessun luogo trovato";
+						$location="Nessun luogo trovato / No founds";
 						$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 						$telegram->sendMessage($content);
 			}
@@ -115,42 +129,82 @@ function start($telegram,$update)
 
 if ($string==1) {
 	$filter= strtoupper($csv[$i][0]);
-}else{
+}elseif ($string==0){
 	$filter=strtoupper($csv[$i][3]);
+}elseif ($string==2){
+	$content = array('chat_id' => $chat_id, 'text' => $text,'disable_web_page_preview'=>true);
+	$telegram->sendMessage($content);
+	$i=intval($text);
+	$result=1;
+	$homepage .="\nID: /".$i."\n";
+	$homepage .="Nome: / Name: ".decode_entities($csv[$i][0])."\n";
+	$homepage .="Risorsa: / Resource: ".decode_entities($csv[$i][1])."\n";
+	if($csv[$i][4] !=NULL) $homepage .="Indirizzo: / Address: ".decode_entities($csv[$i][4]);
+	if($csv[$i][5] !=NULL)	$homepage .=", ".decode_entities($csv[$i][5]);
+	$homepage .="\n";
+	if($csv[$i][3] !=NULL)$homepage .="Comune: / City: ".decode_entities($csv[$i][3])."\n";
+	if(strpos($csv[$i][10],'http') !== false)$homepage .="Web: ".decode_entities($csv[$i][9])."\n";
+	if($csv[$i][10] !=NULL)	$homepage .="Email: ".decode_entities($csv[$i][10])."\n";
+//	if($csv[$i][22] !=NULL)	$homepage .="Descrizione: ".substr(decode_entities($csv[$i][22]), 0, 400)."..[....]\n";
+	if($csv[$i][11] !=NULL)	$homepage .="Tel: ".decode_entities($csv[$i][11])."\n";
+	if($csv[$i][14] !=NULL)	$homepage .="Servizi: / Service: ".decode_entities($csv[$i][14])."\n";
+	if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: / Various: ".decode_entities($csv[$i][15])."\n";
+	if($csv[$i][16] !=NULL)	$homepage .="Foto1: / Photo1: ".decode_entities($csv[$i][16])."\n";
+	if($csv[$i][17] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][17]).")\n";
+	if($csv[$i][18] !=NULL)	$homepage .="Foto2: / Photo2: ".decode_entities($csv[$i][18])."\n";
+	if($csv[$i][19] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][19]).")\n";
+	if($csv[$i][7] !=NULL){
+		$homepage .="Mappa: / Map: \n";
+		$homepage .= "http://www.openstreetmap.org/?mlat=".$csv[$i][7]."&mlon=".$csv[$i][8]."#map=19/".$csv[$i][7]."/".$csv[$i][8];
+	}
+
+	$homepage .="\n____________\n";
+	$chunks = str_split($homepage, self::MAX_LENGTH);
+	foreach($chunks as $chunk) {
+	$content = array('chat_id' => $chat_id, 'text' => $chunk,'disable_web_page_preview'=>false);
+	$telegram->sendMessage($content);
 }
+	$this->create_keyboard_temp($telegram,$chat_id);
+
+	exit;
+	}
+
 
 
 if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 				$ciclo++;
 //	if ($ciclo >40) exit;
-
+	array_push($optionf,["".$i]);
 				$result=1;
-				$homepage .="\n";
-				$homepage .="Nome: ".decode_entities($csv[$i][0])."\n";
-				$homepage .="Risorsa: ".decode_entities($csv[$i][1])."\n";
-				if($csv[$i][4] !=NULL) $homepage .="Indirizzo: ".decode_entities($csv[$i][4]);
+				$homepage .="\nClicca l'ID per dettagli: /".$i."\n";
+				$homepage .="Nome: / Name: ".decode_entities($csv[$i][0])."\n";
+/*
+				$homepage .="Risorsa: / Resource: ".decode_entities($csv[$i][1])."\n";
+				if($csv[$i][4] !=NULL) $homepage .="Indirizzo: / Address: ".decode_entities($csv[$i][4]);
 				if($csv[$i][5] !=NULL)	$homepage .=", ".decode_entities($csv[$i][5]);
 				$homepage .="\n";
-				if($csv[$i][3] !=NULL)$homepage .="Comune: ".decode_entities($csv[$i][3])."\n";
+				if($csv[$i][3] !=NULL)$homepage .="Comune: / City: ".decode_entities($csv[$i][3])."\n";
 				if($csv[$i][9] !=NULL)$homepage .="Web: ".decode_entities($csv[$i][9])."\n";
 				if($csv[$i][10] !=NULL)	$homepage .="Email: ".decode_entities($csv[$i][10])."\n";
 			//	if($csv[$i][22] !=NULL)	$homepage .="Descrizione: ".substr(decode_entities($csv[$i][22]), 0, 400)."..[....]\n";
 				if($csv[$i][11] !=NULL)	$homepage .="Tel: ".decode_entities($csv[$i][11])."\n";
-				if($csv[$i][14] !=NULL)	$homepage .="Servizi: ".decode_entities($csv[$i][14])."\n";
-				if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: ".decode_entities($csv[$i][15])."\n";
-				if($csv[$i][16] !=NULL)	$homepage .="Foto1: ".decode_entities($csv[$i][16])."\n";
-				if($csv[$i][17] !=NULL) $homepage .="(realizzata da: ".decode_entities($csv[$i][17]).")\n";
-				if($csv[$i][18] !=NULL)	$homepage .="Foto2: ".decode_entities($csv[$i][18])."\n";
-				if($csv[$i][19] !=NULL) $homepage .="(realizzata da: ".decode_entities($csv[$i][19]).")\n";
+				if($csv[$i][14] !=NULL)	$homepage .="Servizi: / Service: ".decode_entities($csv[$i][14])."\n";
+				if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: / Various: ".decode_entities($csv[$i][15])."\n";
+				if($csv[$i][16] !=NULL)	$homepage .="Foto1: / Photo1".decode_entities($csv[$i][16])."\n";
+				if($csv[$i][17] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][17]).")\n";
+				if($csv[$i][18] !=NULL)	$homepage .="Foto2: / Photo2: ".decode_entities($csv[$i][18])."\n";
+				if($csv[$i][19] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][19]).")\n";
 				if($csv[$i][7] !=NULL){
-					$homepage .="Mappa:\n";
+					$homepage .="Mappa: / Map: \n";
 					$homepage .= "http://www.openstreetmap.org/?mlat=".$csv[$i][7]."&mlon=".$csv[$i][8]."#map=19/".$csv[$i][7]."/".$csv[$i][8];
 				}
-
-				$homepage .="\n____________\n";
+*/
+				$homepage .="____________\n";
 				}
+
 				if ($ciclo >100) {
 					$location="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
+					$location .="\nToo many results to be displayed (more than 100). Narrow Search";
 					$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 					$telegram->sendMessage($content);
 
@@ -165,18 +219,22 @@ if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 
 		}
 
-
+				$keyb = $telegram->buildKeyBoard($optionf, $onetime=false);
+				$content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => $ciclo." luoghi/places");
+				$telegram->sendMessage($content);
+				$content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Clicca su ID per dettagli / Click on ID for details]");
+				$telegram->sendMessage($content);
 
 	}
-	$this->create_keyboard_temp($telegram,$chat_id);
+//	$this->create_keyboard_temp($telegram,$chat_id);
 
 	}
 
 	function create_keyboard_temp($telegram, $chat_id)
 	 {
-			 $option = array(["Città","Ricerca"],["Informazioni"]);
+			 $option = array(["Città/City","Ricerca/Search"],["Info"]);
 			 $keyb = $telegram->buildKeyBoard($option, $onetime=false);
-			 $content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Digita un Comune, una Ricerca oppure invia la tua posizione tramite la graffetta (📎)]");
+			 $content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Digita l'ID, un Comune, una Ricerca oppure invia la tua posizione tramite la graffetta (📎)]\n[Enter ID or a City, a search or send your location via the clip (📎)]");
 			 $telegram->sendMessage($content);
 	 }
 
@@ -184,7 +242,7 @@ if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 
 function location_manager($telegram,$user_id,$chat_id,$location)
 	{
-
+	$optionf=array([]);
 			$lon=$location["longitude"];
 			$lat=$location["latitude"];
 			$r=1;
@@ -205,6 +263,7 @@ function location_manager($telegram,$user_id,$chat_id,$location)
 
 				if ($parsed_json->{'address'}->{'village'}) $comune .=$parsed_json->{'address'}->{'village'};
 				$location="Sto cercando le località contenenti \"".$comune."\" tramite le coordinate che hai inviato: ".$lat.",".$lon;
+				$location .="Searching for: ".$comune;
 				$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 				$telegram->sendMessage($content);
 
@@ -221,7 +280,7 @@ function location_manager($telegram,$user_id,$chat_id,$location)
 				}
 			if ($count ==0 || $count ==1)
 			{
-						$location="Nessun luogo trovato";
+						$location="Nessun luogo trovato / No founds";
 						$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 						$telegram->sendMessage($content);
 			}
@@ -268,35 +327,37 @@ function location_manager($telegram,$user_id,$chat_id,$location)
 
 if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
 	$ciclo++;
-
+	array_push($optionf,["".$i]);
 				$result=1;
-				$homepage .="\n";
-				$homepage .="Nome: ".decode_entities($csv[$i][0])."\n";
+				$homepage .="\nClicca sull'ID per dettagli: /".$i."\n";
+				$homepage .="Nome: / Name:  ".decode_entities($csv[$i][0])."\n";
+/*
 				$homepage .="Risorsa: ".decode_entities($csv[$i][1])."\n";
-				if($csv[$i][4] !=NULL) $homepage .="Indirizzo: ".decode_entities($csv[$i][4]);
+				if($csv[$i][4] !=NULL) $homepage .="Indirizzo: / Address: ".decode_entities($csv[$i][4]);
 				if($csv[$i][5] !=NULL)	$homepage .=", ".decode_entities($csv[$i][5]);
 				$homepage .="\n";
-				if($csv[$i][3] !=NULL)$homepage .="Comune: ".decode_entities($csv[$i][3])."\n";
+				if($csv[$i][3] !=NULL)$homepage .="Comune: / Comune:  ".decode_entities($csv[$i][3])."\n";
 				if($csv[$i][9] !=NULL)$homepage .="Web: ".decode_entities($csv[$i][9])."\n";
 				if($csv[$i][10] !=NULL)	$homepage .="Email: ".decode_entities($csv[$i][10])."\n";
 			//	if($csv[$i][22] !=NULL)	$homepage .="Descrizione: ".substr(decode_entities($csv[$i][22]), 0, 400)."..[....]\n";
 				if($csv[$i][11] !=NULL)	$homepage .="Tel: ".decode_entities($csv[$i][11])."\n";
-				if($csv[$i][14] !=NULL)	$homepage .="Servizi: ".decode_entities($csv[$i][14])."\n";
-				if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: ".decode_entities($csv[$i][15])."\n";
-				if($csv[$i][16] !=NULL)	$homepage .="Foto1: ".decode_entities($csv[$i][16])."\n";
-				if($csv[$i][17] !=NULL) $homepage .="(realizzata da: ".decode_entities($csv[$i][17]).")\n";
-				if($csv[$i][18] !=NULL)	$homepage .="Foto2: ".decode_entities($csv[$i][18])."\n";
-				if($csv[$i][19] !=NULL) $homepage .="(realizzata da: ".decode_entities($csv[$i][19]).")\n";
+				if($csv[$i][14] !=NULL)	$homepage .="Servizi: / Services: ".decode_entities($csv[$i][14])."\n";
+				if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: / Various: ".decode_entities($csv[$i][15])."\n";
+				if($csv[$i][16] !=NULL)	$homepage .="Foto1: / Photo1: ".decode_entities($csv[$i][16])."\n";
+				if($csv[$i][17] !=NULL) $homepage .="(realizzata da: / BY: ".decode_entities($csv[$i][17]).")\n";
+				if($csv[$i][18] !=NULL)	$homepage .="Foto2: / Photo2: ".decode_entities($csv[$i][18])."\n";
+				if($csv[$i][19] !=NULL) $homepage .="(realizzata da: / BY: ".decode_entities($csv[$i][19]).")\n";
 				if($csv[$i][7] !=NULL){
 					$homepage .="Dista: ".$csv[$i][100]."\n";
 					$homepage .="Mappa:\n";
 					$homepage .= "http://www.openstreetmap.org/?mlat=".$csv[$i][7]."&mlon=".$csv[$i][8]."#map=19/".$csv[$i][7]."/".$csv[$i][8];
 				}
-
-				$homepage .="\n____________\n";
+*/
+				$homepage .="____________\n";
 				}
 					if ($ciclo >100) {
-						$location="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
+						$location ="Troppi risultati per essere visualizzati (più di 100). Restringi la ricerca";
+						$location .="\nToo many results to be displayed (more than 100). Narrow Search";
 						$content = array('chat_id' => $chat_id, 'text' => $location,'disable_web_page_preview'=>true);
 						$telegram->sendMessage($content);
 
@@ -310,10 +371,133 @@ if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
 				$telegram->sendMessage($content);
 
 			}
-			$this->create_keyboard_temp($telegram,$chat_id);
+			$keyb = $telegram->buildKeyBoard($optionf, $onetime=false);
+			$content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Clicca su ID per dettagli / Click on ID for details]");
+			$telegram->sendMessage($content);
+	//		$this->create_keyboard_temp($telegram,$chat_id);
 
-		exit;
+		//exit;
 	}
+	function location_manager_inline($inline_query,$telegram,$user_id,$chat_id,$location)
+		{
+
+		$optionf=array([]);
+		$trovate=0;
+		$res=[];
+		$id="";
+		$i=0;
+		$idx=[];
+		$distanza=[];
+		$id3="";
+		$id1="";
+		$inline="";
+	$id=$inline_query['id'];
+	$lat=$inline_query["location"]['latitude'];
+	$lon=$inline_query["location"]['longitude'];
+				$r=1;
+			//	$response=$telegram->getData();
+				$response=str_replace(" ","%20",$response);
+
+					$reply="http://nominatim.openstreetmap.org/reverse?email=piersoft2@gmail.com&format=json&lat=".$lat."&lon=".$lon."&zoom=18&addressdetails=1";
+					$json_string = file_get_contents($reply);
+					$parsed_json = json_decode($json_string);
+					//var_dump($parsed_json);
+					$comune="";
+					$temp_c1 =$parsed_json->{'display_name'};
+
+					if ($parsed_json->{'address'}->{'town'}) {
+						$temp_c1 .="\nCittà: ".$parsed_json->{'address'}->{'town'};
+						$comune =$parsed_json->{'address'}->{'town'};
+					}else 	$comune =$parsed_json->{'address'}->{'city'};
+
+					if ($parsed_json->{'address'}->{'village'}) $comune =$parsed_json->{'address'}->{'village'};
+
+				  $alert="";
+				//	echo $comune;
+					$urlgd="db/luoghi.csv";
+					$inizio=0;
+					$homepage ="";
+					$csv = array_map('str_getcsv',file($urlgd));
+					$count = 0;
+					foreach($csv as $data=>$csv1){
+						$count = $count+1;
+					}
+			//		$id3 = $telegram->InlineQueryResultArticle($id."/0", "Nessun luogo censito\nNo place in ViaggiareinPuglia's database", array('message_text'=>"Nessun luogo censito\nNo place in ViaggiareinPuglia's database",'disable_web_page_preview'=>true),"http://www.piersoft.it/viaggiareinpugliabot/puglia.png");
+
+			//		$res= array($id3);
+			//		$content=array('inline_query_id'=>$inline_query['id'],'results' =>json_encode($res));
+			//		$telegram->answerInlineQuery($content);
+
+				if ($count ==0)
+				{
+
+					$id3 = $telegram->InlineQueryResultArticle($id."/0", "Nessun luogo censito\nNo place in ViaggiareinPuglia's database", array('message_text'=>"Nessun luogo censito\nNo place in ViaggiareinPuglia's database",'disable_web_page_preview'=>true),"http://www.piersoft.it/viaggiareinpugliabot/puglia.png");
+
+					$res= array($id3);
+					$content=array('inline_query_id'=>$inline_query['id'],'results' =>json_encode($res));
+					$telegram->answerInlineQuery($content);
+					$this->create_keyboard($telegram,$chat_id);
+					exit;
+				}
+				function decode_entities($text)
+				{
+
+								$text=htmlentities($text, ENT_COMPAT,'ISO-8859-1', true);
+							$text= preg_replace('/&#(\d+);/me',"chr(\\1)",$text); #decimal notation
+								$text= preg_replace('/&#x([a-f0-9]+);/mei',"chr(0x\\1)",$text);  #hex notation
+							$text= html_entity_decode($text,ENT_COMPAT,"UTF-8"); #NOTE: UTF-8 does not work!
+
+								return $text;
+				}
+
+
+				$result=0;
+
+				$ciclo=0;
+	//if ($count >40) $count=40;
+$parola="";
+		for ($i=$inizio;$i<$count;$i++)
+
+
+	{
+		$filter=strtoupper($csv[$i][3]);
+
+		if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
+			$ciclo++;
+			$parola="trovato";
+
+		// $id3 = $telegram->InlineQueryResultArticle($id."/0", $comune." ".$filter, array('message_text'=>"Nessun luogo censito\nNo place in ViaggiareinPuglia's database",'disable_web_page_preview'=>true),"http://www.piersoft.it/viaggiareinpugliabot/puglia.png");
+		//  $rest= array($id3);
+		//  $content=array('inline_query_id'=>$inline_query['id'],'results' =>json_encode($rest));
+		//  $telegram->answerInlineQuery($content);
+
+if ($ciclo<50){
+
+
+		$idx[$i] = $telegram->InlineQueryResultArticle($id."/".$i, $csv[$i][0], array('message_text'=>"/".$i,'disable_web_page_preview'=>true),"http://www.piersoft.it/viaggiareinpugliabot/puglia.png");
+		array_push($res,$idx[$i]);
+}
+		}
+
+
+
+	}
+
+	 $id3 = $telegram->InlineQueryResultArticle($id."/0", $ciclo." ".$comune." ".$parola, array('message_text'=>"Nessun luogo censito\nNo place in ViaggiareinPuglia's database",'disable_web_page_preview'=>true),"http://www.piersoft.it/viaggiareinpugliabot/puglia.png");
+	  $rest= array($id3);
+	  $content=array('inline_query_id'=>$inline_query['id'],'results' =>json_encode($res));
+	  $telegram->answerInlineQuery($content);
+
+		//	if ($ciclo !==0){
+	//$content = array('chat_id' => 69668132, 'text' => "count non zero",'disable_web_page_preview'=>true);
+	//$telegram->sendMessage($content);
+	//$content=array('inline_query_id'=>$inline_query['id'],'results' =>json_encode($res));
+	//$telegram->answerInlineQuery($content);
+			//					}
+
+
+				}
+
 
 
 }
