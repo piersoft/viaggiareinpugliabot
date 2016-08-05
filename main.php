@@ -63,6 +63,15 @@ function start($telegram,$update)
 			}elseif (strpos($inline_query["location"],'.') !== false){
 					$this->location_manager_inline($inline_query,$telegram,$user_id,$chat_id,$location);
 					exit;
+				}elseif ($text == "/location" || $text == "Posizione") {
+
+					$option = array(array($telegram->buildKeyboardButton("Invia la tua posizione / send your location", false, true)) //this work
+		                        );
+		    // Create a permanent custom keyboard
+		    $keyb = $telegram->buildKeyBoard($option, $onetime=false);
+		    $content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "Attiva la localizzazione sul tuo smartphone / Turn on your GPS");
+		    $telegram->sendMessage($content);
+		    exit;
 				}
 			elseif($location!=null)
 		{
@@ -72,9 +81,21 @@ function start($telegram,$update)
 		}
 
 		else{
+			function extractString($string, $start, $end) {
+					$string = " ".$string;
+					$ini = strpos($string, $start);
+					if ($ini == 0) return "";
+					$ini += strlen($start);
+					$len = strpos($string, $end, $ini) - $ini;
+					return substr($string, $ini, $len);
+			}
+			if (strpos($text,' ') !== false){
+			  $text=extractString($text,"/"," ");
+			}
 			if (strpos($text,'1') !== false || strpos($text,'2') !== false ||strpos($text,'3') !== false ||strpos($text,'4') !== false ||strpos($text,'5') !== false ||strpos($text,'6') !== false ||strpos($text,'7') !== false ||strpos($text,'8') !== false ||strpos($text,'9') !== false ) {
 				$text="/".$text;
 			}
+
 			$string=0;
 			$optionf=array([]);
 			if(strpos($text,'?') !== false){
@@ -96,6 +117,7 @@ function start($telegram,$update)
 		$string=2;
 
 	}
+
 			$urlgd="db/luoghi.csv";
 
 			  $inizio=0;
@@ -139,6 +161,7 @@ if ($string==1) {
 	$homepage .="\nID: /".$i."\n";
 	$homepage .="Nome: / Name: ".decode_entities($csv[$i][0])."\n";
 	$homepage .="Risorsa: / Resource: ".decode_entities($csv[$i][1])."\n";
+
 	if($csv[$i][4] !=NULL) $homepage .="Indirizzo: / Address: ".decode_entities($csv[$i][4]);
 	if($csv[$i][5] !=NULL)	$homepage .=", ".decode_entities($csv[$i][5]);
 	$homepage .="\n";
@@ -147,22 +170,28 @@ if ($string==1) {
 	if($csv[$i][10] !=NULL)	$homepage .="Email: ".decode_entities($csv[$i][10])."\n";
 //	if($csv[$i][22] !=NULL)	$homepage .="Descrizione: ".substr(decode_entities($csv[$i][22]), 0, 400)."..[....]\n";
 	if($csv[$i][11] !=NULL)	$homepage .="Tel: ".decode_entities($csv[$i][11])."\n";
-	if($csv[$i][14] !=NULL)	$homepage .="Servizi: / Service: ".decode_entities($csv[$i][14])."\n";
+	if($csv[$i][14] !=NULL)	$homepage .="Servizi: / Service: ".$csv[$i][14]."\n";
 	if($csv[$i][15] !=NULL)	$homepage .="Attrezzature: / Various: ".decode_entities($csv[$i][15])."\n";
 	if($csv[$i][16] !=NULL)	$homepage .="Foto1: / Photo1: ".decode_entities($csv[$i][16])."\n";
 	if($csv[$i][17] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][17]).")\n";
 	if($csv[$i][18] !=NULL)	$homepage .="Foto2: / Photo2: ".decode_entities($csv[$i][18])."\n";
 	if($csv[$i][19] !=NULL) $homepage .="(realizzata da: / By: ".decode_entities($csv[$i][19]).")\n";
-	if($csv[$i][7] !=NULL){
-		$homepage .="Mappa: / Map: \n";
-		$homepage .= "http://www.openstreetmap.org/?mlat=".$csv[$i][7]."&mlon=".$csv[$i][8]."#map=19/".$csv[$i][7]."/".$csv[$i][8];
-	}
+
 
 	$homepage .="\n____________\n";
 	$chunks = str_split($homepage, self::MAX_LENGTH);
 	foreach($chunks as $chunk) {
 	$content = array('chat_id' => $chat_id, 'text' => $chunk,'disable_web_page_preview'=>false);
 	$telegram->sendMessage($content);
+	if($csv[$i][7] !=NULL){
+				$homepagemappa = "http://www.openstreetmap.org/?mlat=".$csv[$i][7]."&mlon=".$csv[$i][8]."#map=19/".$csv[$i][7]."/".$csv[$i][8];
+
+		$option = array( array( $telegram->buildInlineKeyboardButton("MAPPA", $url=$homepagemappa)));
+$keyb = $telegram->buildInlineKeyBoard($option);
+$content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "<b>Vai alla</b>",'parse_mode'=>"HTML");
+$telegram->sendMessage($content);
+//		$homepage .="Mappa: / Map: \n";
+	}
 }
 	$this->create_keyboard_temp($telegram,$chat_id);
 
@@ -174,7 +203,7 @@ if ($string==1) {
 if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 				$ciclo++;
 //	if ($ciclo >40) exit;
-	array_push($optionf,["".$i]);
+	array_push($optionf,["/".$i." ".decode_entities($csv[$i][0])]);
 				$result=1;
 				$homepage .="\nClicca l'ID per dettagli: /".$i."\n";
 				$homepage .="Nome: / Name: ".decode_entities($csv[$i][0])."\n";
@@ -232,9 +261,9 @@ if (strpos(decode_entities($filter),strtoupper($text)) !== false ){
 
 	function create_keyboard_temp($telegram, $chat_id)
 	 {
-			 $option = array(["Città/City","Ricerca/Search"],["Info"]);
+			 $option = array(["Città/City","Ricerca/Search"],["Posizione","Info"]);
 			 $keyb = $telegram->buildKeyBoard($option, $onetime=false);
-			 $content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Digita l'ID, un Comune, una Ricerca oppure invia la tua posizione tramite la graffetta (📎)]\n[Enter ID or a City, a search or send your location via the clip (📎)]");
+			 $content = array('chat_id' => $chat_id, 'reply_markup' => $keyb, 'text' => "[Digita l'ID, un Comune, una Ricerca oppure invia la tua posizione tramite la graffetta (📎) o clicca /location]\n[Enter ID or a City, a search or send your location via the clip (📎) or click /location]");
 			 $telegram->sendMessage($content);
 	 }
 
@@ -327,7 +356,7 @@ function location_manager($telegram,$user_id,$chat_id,$location)
 
 if (strpos(decode_entities($filter),strtoupper($comune)) !== false ){
 	$ciclo++;
-	array_push($optionf,["".$i]);
+	array_push($optionf,["/".$i." ".decode_entities($csv[$i][0])]);
 				$result=1;
 				$homepage .="\nClicca sull'ID per dettagli: /".$i."\n";
 				$homepage .="Nome: / Name:  ".decode_entities($csv[$i][0])."\n";
